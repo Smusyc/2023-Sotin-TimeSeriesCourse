@@ -144,14 +144,23 @@ class NaiveBestMatchFinder(BestMatchFinder):
         N, m = self.ts_data.shape
         
         bsf = float("inf")
-        
         if (self.excl_zone_denom is None):
             excl_zone = 0
         else:
             excl_zone = int(np.ceil(m / self.excl_zone_denom))
-        
+        distances = []
         # INSERT YOUR CODE
-
+        for i in range(N):
+            if(self.normalize):
+                dist=DTW_distance(z_normalize(self.query),z_normalize(self.ts_data[i]), self.r)
+            else: 
+                dist = DTW_distance(self.query, self.ts_data[i], self.r)
+            if(bsf<dist):
+                distances.append(np.inf)
+            else:
+                distances.append(dist)
+                self.bestmatch = self._top_k_match(distances, m, bsf, excl_zone)
+                bsf = self.bestmatch['distance'][-1]
         return self.bestmatch
 
 
