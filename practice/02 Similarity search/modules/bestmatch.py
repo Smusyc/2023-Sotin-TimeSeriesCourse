@@ -160,7 +160,8 @@ class NaiveBestMatchFinder(BestMatchFinder):
             else:
                 distances.append(dist)
                 self.bestmatch = self._top_k_match(distances, m, bsf, excl_zone)
-                bsf = self.bestmatch['distance'][-1]
+                if len(self.bestmatch['distance']) == self.top_k:
+                    bsf = self.bestmatch['distance'][-1]
         return self.bestmatch
 
 
@@ -168,11 +169,21 @@ class UCR_DTW(BestMatchFinder):
     """
     UCR-DTW Match Finder.
     """
-    
+    #self.bestmatch = {}
     def __init__(self, ts=None, query=None, exclusion_zone=1, top_k=3, normalize=True, r=0.05):
         super().__init__(ts, query, exclusion_zone, top_k, normalize, r)
 
-
+    def border(self, value, upper, lower):
+        result = 0
+        if value>upper:
+            result = upper
+        elif value<lower:
+            result = lower
+        else:
+            result = value
+        
+        return result
+        
     def _LB_Kim(self, subs1, subs2):
         """
         Compute LB_Kim lower bound between two subsequences.
@@ -192,11 +203,13 @@ class UCR_DTW(BestMatchFinder):
         """
 
         lb_Kim = 0
-
+        lb_Kim = ED_distance(np.array(subs1[0]), np.array(subs2[0])) + ED_distance(np.array(subs1[-1]), np.array(subs2[-1]))
         # INSERT YOUR CODE
         
         return lb_Kim
 
+
+        
 
     def _LB_Keogh(self, subs1, subs2, r):
         """
@@ -220,7 +233,19 @@ class UCR_DTW(BestMatchFinder):
         """
         
         lb_Keogh = 0
+        u_max = 0
+        l_min = 0
 
+        for i in range(len(subs1)):
+            u_max = np.argmax(subs1[border(i-r,0, len(subs1)-1):border(i+r,0, len(subs1)-1)])
+            l_min = np.argmin(subs1[border(i-r,0, len(subs1)-1):border(i+r,0, len(subs1)-1)])
+            if subs1[i]>u_max:
+                lb_Keogh += (subs1[i] - u_max)**2
+            elif subs1[i]<l_min:
+                lb_Keogh += (subs1[i] - l_min)**2
+            else:
+                lb_Keogh += 0
+                
         # INSERT YOUR CODE
 
         return lb_Keogh
@@ -247,9 +272,37 @@ class UCR_DTW(BestMatchFinder):
         self.lb_Kim_num = 0
         self.lb_KeoghQC_num = 0
         self.lb_KeoghCQ_num = 0
-        
         # INSERT YOUR CODE
 
+        distances = []
+        # INSERT YOUR CODE
+        #            self.lb_KeoghQC_num = _LB_Keogh(query, self.ts_data[i])
+#            self.lb_KeoghCQ_num = _LB_Keogh(self.ts_data[i], query)
+        #
+        for i in range(N):
+            
+            if _LB_Kim(query, self.ts_data[i]) < bsf:
+                if _LB_Keogh(query, self.ts_data[i]) < bsf:
+                    if _LB_Keogh(self.ts_data[i], query) < bsf:
+                        if(self.normalize):
+                            dist=DTW_distance(z_normalize(self.query),z_normalize(self.ts_data[i]), self.r)
+                        else: 
+                            dist = DTW_distance(self.query, self.ts_data[i], self.r)
+                        if(bsf<dist):
+                            distances.append(np.inf)
+                        else:
+                            distances.append(dist)
+                            self.bestmatch = self._top_k_match(distances, m, bsf, excl_zone)
+                            bsf = self.bestmatch['distance'][-1]
+                            self.bestmatch
+                    else:
+                        self.lb_KeoghCQ_num+=1
+                else:
+                    self.lb_KeoghQC_num+=1
+            else:
+                self.lb_Kim_num+=1
+        
+        
         return {'index' : self.bestmatch['index'],
                 'distance' : self.bestmatch['distance'],
                 'lb_Kim_num': self.lb_Kim_num,
