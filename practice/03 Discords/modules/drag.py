@@ -186,3 +186,15 @@ def refine_candidates(T, m, M_T, Σ_T, is_cands):
         core.apply_exclusion_zone(P, idx, excl_zone, np.NINF)
      
     return discords_idx, discords_dist, discords_nn_idx
+
+def DRAG(data, m, r, include= None):
+    if include is None:
+        include = np.ones(len(data)-m+1, dtype=bool)
+    else:
+        include=include[:len(data)-m+1]
+    T, M_T, Σ_T = core.preprocess(data, m)
+    is_cands = find_candidates(T, m, M_T, Σ_T, r, init_cands=include, right=True)
+    cand_index = np.flatnonzero(is_cands)
+    is_cands = find_candidates(T, m, M_T, Σ_T, r, init_cands=is_cands, right=False)
+    cands = np.flatnonzero(is_cands)
+    return refine_candidates(T, m, M_T, Σ_T, is_cands)
