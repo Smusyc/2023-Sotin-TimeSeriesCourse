@@ -72,7 +72,23 @@ def meter_swapping_detection(heads, tails, house_idx, m):
     min_score = {}
 
     # INSERT YOUR CODE
-    
+    for i in house_idx:
+      H_i, T_i = heads[f'H_{i}'].iloc[:, 0].astype(float), tails[f'T_{i}'].iloc[:, 0].astype(float)
+      mp = compute_mp(T_i, m = m, ts2 = H_i,exclusion_zone=None,  ignore_trivial=False)
+      mp_min = np.nanmin(mp['mp']) + eps
+      #mp[mp == np.inf] = np.nan
+
+      for j in house_idx:
+        T_j = tails[f'T_{j}'].iloc[:, 0].astype(float)
+        mp_j = compute_mp(T_j, m = m, ts2 = H_i, ignore_trivial=False)
+        mp_j_min = np.nanmin(mp_j['mp'])
+        mp_j[mp_j == np.inf] = np.nan
+        score = mp_j_min / mp_min
+
+        #code to record best score
+        if not min_score: min_score = dict(zip(['i', 'j', 'score', 'mp_j'], [i, j, score, mp_j])) #check if dict is empty
+        elif score < min_score['score']: min_score = dict(zip(['i', 'j', 'score', 'mp_j'], [i, j, score, mp_j]))
+        
     return min_score
 
 
